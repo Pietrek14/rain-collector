@@ -52,6 +52,9 @@ fn main() {
         duration_days: 0,
     };
 
+    let mut current_rain_sum = 0.;
+    let mut biggest_rain_sum = 0.;
+
     let mut current_date = start_date;
 
     for line in BufReader::new(file).lines().into_iter().skip(1) {
@@ -87,6 +90,7 @@ fn main() {
 
             collector = collector_with_rain.min(COLLECTOR_CAPACITY).ceil();
 
+            // Ex.5.
             if current_period_of_rainless_days_with_temp_rising
                 .period
                 .duration_days
@@ -103,11 +107,15 @@ fn main() {
                 },
                 last_temp: f32::MAX,
             };
+
+            // Ex. 6.
+            current_rain_sum += rain;
         } else {
             let collector_with_evaporation = collector - 0.0003 * temp.powf(1.5) * collector;
 
             collector = collector_with_evaporation.max(0.).ceil();
 
+            // Ex. 5.
             if temp > current_period_of_rainless_days_with_temp_rising.last_temp {
                 current_period_of_rainless_days_with_temp_rising
                     .period
@@ -130,6 +138,13 @@ fn main() {
                     last_temp: 0.,
                 };
             }
+
+            // Ex. 6.
+            if current_rain_sum > biggest_rain_sum {
+                biggest_rain_sum = current_rain_sum;
+            }
+
+            current_rain_sum = 0.;
         }
 
         current_period_of_rainless_days_with_temp_rising.last_temp = temp;
@@ -172,6 +187,10 @@ fn main() {
         if temp > 15. && rain > 0.6 {
             days_with_temp_over_15_and_rain_over_0_6 += 1;
         }
+    }
+
+    if current_rain_sum > biggest_rain_sum {
+        biggest_rain_sum = current_rain_sum;
     }
 
     println!("Ex. 1.");
@@ -244,4 +263,7 @@ fn main() {
         end_date.format("%Y-%m-%d"),
         longest_period_of_rainless_days_with_temp_rising.duration_days
     );
+
+    println!("Ex. 6.");
+    println!("\tBiggest rain sum: {}", biggest_rain_sum);
 }
