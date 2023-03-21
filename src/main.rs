@@ -3,13 +3,23 @@ use std::{
     io::{BufRead, BufReader},
 };
 
-use chrono::{Datelike, NaiveDate};
+use chrono::{Datelike, Days, NaiveDate};
 
 const COLLECTOR_CAPACITY: f32 = 25000.;
 
 struct Ex2Data {
     date: NaiveDate,
     water_refilled: f32,
+}
+
+struct Period {
+    start: NaiveDate,
+    duration_days: u64,
+}
+
+struct Ex5Data {
+    period: Period,
+    last_temp: f32,
 }
 
 fn main() {
@@ -28,6 +38,19 @@ fn main() {
     let mut monthly_water_use = vec![0.; 12];
 
     let mut biggest_rain_water_loss = 0.;
+
+    let mut current_period_of_rainless_days_with_temp_rising = Ex5Data {
+        period: Period {
+            start: start_date,
+            duration_days: 0,
+        },
+        last_temp: 0.,
+    };
+
+    let mut longest_period_of_rainless_days_with_temp_rising = Period {
+        start: start_date,
+        duration_days: 0,
+    };
 
     let mut current_date = start_date;
 
@@ -63,11 +86,53 @@ fn main() {
             }
 
             collector = collector_with_rain.min(COLLECTOR_CAPACITY).ceil();
+
+            if current_period_of_rainless_days_with_temp_rising
+                .period
+                .duration_days
+                > longest_period_of_rainless_days_with_temp_rising.duration_days
+            {
+                longest_period_of_rainless_days_with_temp_rising =
+                    current_period_of_rainless_days_with_temp_rising.period;
+            }
+
+            current_period_of_rainless_days_with_temp_rising = Ex5Data {
+                period: Period {
+                    start: current_date,
+                    duration_days: 0,
+                },
+                last_temp: f32::MAX,
+            };
         } else {
             let collector_with_evaporation = collector - 0.0003 * temp.powf(1.5) * collector;
 
             collector = collector_with_evaporation.max(0.).ceil();
+
+            if temp > current_period_of_rainless_days_with_temp_rising.last_temp {
+                current_period_of_rainless_days_with_temp_rising
+                    .period
+                    .duration_days += 1;
+            } else {
+                if current_period_of_rainless_days_with_temp_rising
+                    .period
+                    .duration_days
+                    > longest_period_of_rainless_days_with_temp_rising.duration_days
+                {
+                    longest_period_of_rainless_days_with_temp_rising =
+                        current_period_of_rainless_days_with_temp_rising.period;
+                }
+
+                current_period_of_rainless_days_with_temp_rising = Ex5Data {
+                    period: Period {
+                        start: current_date,
+                        duration_days: 0,
+                    },
+                    last_temp: 0.,
+                };
+            }
         }
+
+        current_period_of_rainless_days_with_temp_rising.last_temp = temp;
 
         // How much water is needed to water the plants
         let water_needed = if temp <= 30. { 12000. } else { 24000. };
@@ -162,5 +227,21 @@ fn main() {
     println!(
         "\tTo accomodate for this loss, the collector should have a capacity of {} m^3",
         (COLLECTOR_CAPACITY + biggest_rain_water_loss).ceil()
+    );
+
+    println!("Ex. 5.");
+
+    let start_date = longest_period_of_rainless_days_with_temp_rising.start;
+    let end_date = start_date
+        .checked_add_days(Days::new(
+            longest_period_of_rainless_days_with_temp_rising.duration_days,
+        ))
+        .unwrap();
+
+    println!(
+        "\tLongest period of rainless days with temperature rising: {} - {} ({} days)",
+        start_date.format("%Y-%m-%d"),
+        end_date.format("%Y-%m-%d"),
+        longest_period_of_rainless_days_with_temp_rising.duration_days
     );
 }
